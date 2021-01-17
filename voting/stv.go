@@ -1,92 +1,251 @@
 package voting
 
+import "fmt"
+
 type candidate struct {
 	gainedPercent float32
+	won           bool
+	name          string
+	eliminated    bool
 	voters        []ballot
 }
 
+var candidateDetails map[string]*candidate = make(map[string]*candidate)
+var requiredPercentage float32
+
+type vote struct {
+	candidate string
+	counted   bool
+}
 type ballot struct {
 	id    int
-	votes []string
+	votes []*vote
 }
 
-// STVVoting takes the details for an election, and returns the elected candidates
-func STVVoting(numSeats int, candidates []string, votes []ballot) (results []string) {
-	var requiredPercent float32 = float32(100 / numSeats)
+var ballots []*ballot
 
-	var candidateDetails map[string]*candidate
+func cleanseAllBallots() {
+	for _, b := range ballots {
+		b.cleanse()
+	}
+}
 
-	for _, name := range candidates {
-		candidateDetails[name] = &candidate{
-			gainedPercent: 0,
+func (b *ballot) cleanse() {
+	for i := len(b.votes) - 1; i >= 0; i-- {
+		_, ok := candidateDetails[b.votes[i].candidate]
+		if !ok {
+			b.votes = append(b.votes[:i], b.votes[i+1:]...)
 		}
 	}
 
-	for len(results) != numSeats {
+}
 
-		var percentPerVote float32 = float32(100 / len(votes))
-
-		for i, b := range votes {
-			var remains ballot = ballot{id: b.id, votes: b.votes[1:]}
-
-			candidateDetails[b.votes[0]].voters = append(candidateDetails[b.votes[0]].voters, remains)
-
-			votes[i].votes = votes[i].votes[1:]
-			if len(votes[i].votes) == 0 {
-				votes = append(votes[:i], votes[i+1:]...)
-			}
-
-			candidateDetails[b.votes[0]].gainedPercent += percentPerVote
-
+func (b *ballot) nextVote() *vote {
+	for _, vote := range b.votes {
+		if !vote.counted {
+			return vote
 		}
+	}
+	return nil
+}
 
-		var runoff bool = false
+func (b *ballot) lastVote() *vote {
+	for i := 0; i < len(b.votes); i++ {
+		if !b.votes[i].counted {
+			return b.votes[i-1]
+		}
+	}
+	return nil
+}
 
-		for name, details := range candidateDetails {
-			if details.gainedPercent >= requiredPercent {
-				results = append(results, name)
-			}
+func (b *ballot) stillIn() bool {
+	fmt.Printf("Ballot: ")
+	for _, v := range b.votes {
+		fmt.Printf("Vote: %v, %v ", v.counted, v.candidate)
+	}
+	fmt.Printf("\n")
+	if len(b.votes) > 0 {
+		return !b.votes[len(b.votes)-1].counted
+	} else {
+		return false
+	}
+}
 
-			runoff = true
+func voteRedistribution(firstLevel bool) (winners int) {
 
-			// Excess Votes
-			var distributionPercentage float32 = details.gainedPercent - requiredPercent
-			var reallocatePerVote float32 = distributionPercentage / float32(len(details.voters))
+	// Next Stage - Redistribution or Elimination
+	var needsRedistributing []*candidate
+	for _, candidate := range candidateDetails {
+		if !candidate.won && candidate.gainedPercent >= requiredPercentage {
+			candidate.won = true
+			fmt.Printf("Winner: %v\n", candidate.name)
+			winners++
+			needsRedistributing = append(needsRedistributing, candidate)
+		}
+	}
 
-			for i, b := range details.voters {
-
-				_, ok := candidateDetails[b.votes[0]]
-				for !ok {
-					b.votes = b.votes[1:]
-					if len(b.votes) == 0 {
-						details.voters = append(details.voters[:i], details.voters[i+1:]...)
-					} else {
-						_, ok = candidateDetails[b.votes[0]]
+	if len(needsRedistributing) != 0 {
+		// Redistributing Results
+		for _, goodCandidate := range needsRedistributing {
+			fmt.Printf("Redistributing %v\n", goodCandidate.name)
+			var voteCount int = 0
+			for _, ballot := range ballots {
+				lastVote := ballot.lastVote()
+				if lastVote != nil {
+					if lastVote.candidate == goodCandidate.name {
+						voteCount++
 					}
 				}
-
-				candidateDetails[b.votes[0]].gainedPercent += reallocatePerVote
-
-				var remains ballot = ballot{id: b.id, votes: b.votes[1:]}
-				candidateDetails[b.votes[0]].voters = append(candidateDetails[b.votes[0]].voters, remains)
-
-				// TODO Continue
-				// Also, work out where I've actually got to
-				// This is starting to get very ugly
-
 			}
+			var percentPerVote float32 = float32((goodCandidate.gainedPercent - requiredPercentage) / float32(voteCount))
 
-			// Yeet from map
+			for _, ballot := range ballots {
+				lastVote := ballot.lastVote()
+				if lastVote != nil {
+					if lastVote.candidate == goodCandidate.name {
+						b := ballot.nextVote()
+						if b != nil {
+							fmt.Printf("Redistributed Vote for %v\n", b.candidate)
+							candidateDetails[b.candidate].gainedPercent += percentPerVote
+							b.counted = true
+						}
+					}
+				}
+			}
 		}
 
-		if !runoff {
-			// TODO
+		winners += voteRedistribution(false)
 
-			// Yeet the worst
+	} else if firstLevel {
+		// Eliminate the Lowest (only if no redistribution happened before)
+		fmt.Println("We're going into eliminations")
+		var worstCandidate *candidate = &candidate{gainedPercent: 100}
+		for _, candidate := range candidateDetails {
+			if candidate.gainedPercent < worstCandidate.gainedPercent {
+				worstCandidate = candidate
+			}
 		}
+
+		var voteCount int = 0
+		for _, ballot := range ballots {
+			lastVote := ballot.lastVote()
+			if lastVote != nil {
+				if ballot.lastVote().candidate == worstCandidate.name {
+					voteCount++
+				}
+			}
+		}
+		var percentPerVote float32 = float32(worstCandidate.gainedPercent / float32(voteCount))
+
+		for _, ballot := range ballots {
+			b := ballot.nextVote()
+			if b != nil {
+				candidateDetails[b.candidate].gainedPercent += percentPerVote
+				b.counted = true
+			}
+		}
+
+		delete(candidateDetails, worstCandidate.name)
+
+		cleanseAllBallots()
+
+		winners += voteRedistribution(false)
 
 	}
 
 	return
+}
+
+func runElection(numSeats int) (results []string) {
+
+	// Count Winners
+	var winners int = 0
+
+	for winners < numSeats {
+
+		if len(candidateDetails) == numSeats {
+			for _, nowWinner := range candidateDetails {
+				nowWinner.won = true
+			}
+			break
+		}
+
+		fmt.Println("New Round")
+		fmt.Printf("In ths Round: %v\n", candidateDetails)
+
+		// Calculate Percentage Per Vote
+		var voteCount int
+		for _, val := range ballots {
+			if val.stillIn() {
+				voteCount++
+			}
+		}
+
+		fmt.Printf("Votes In: %v\n", voteCount)
+
+		if voteCount == 0 {
+			// End of Election
+			// fmt.Println("Ending the Election")
+			// for _, nowWinner := range candidateDetails {
+			// 	nowWinner.won = true
+			// }
+			// break
+			voteCount = 100
+		}
+
+		var percentPerVote float32 = float32(100 / voteCount)
+
+		// First Votes
+		for _, ballot := range ballots {
+			b := ballot.nextVote()
+			if b != nil {
+				candidateDetails[b.candidate].gainedPercent += percentPerVote
+				b.counted = true
+			}
+		}
+
+		winners += voteRedistribution(true)
+
+	}
+
+	for name, candidate := range candidateDetails {
+		if candidate.won {
+			results = append(results, name)
+		}
+	}
+
+	return
+
+}
+
+// STVElection runs the complexity of the STV election
+func STVElection(numSeats int, candidates []string, pollCards [][]string) []string {
+
+	// Required Percentage to Win
+	requiredPercentage = float32(100 / numSeats)
+
+	candidateDetails = make(map[string]*candidate)
+
+	// Create Map
+	for _, name := range candidates {
+		candidateDetails[name] = &candidate{
+			gainedPercent: 0,
+			name:          name,
+			won:           false,
+			eliminated:    false,
+		}
+	}
+
+	ballots = []*ballot{}
+
+	for _, b := range pollCards {
+		ballot := ballot{}
+		for _, v := range b {
+			ballot.votes = append(ballot.votes, &vote{candidate: v, counted: false})
+		}
+		ballots = append(ballots, &ballot)
+	}
+
+	return runElection(numSeats)
 
 }
