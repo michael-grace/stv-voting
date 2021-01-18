@@ -1,0 +1,39 @@
+---
+
+  # The Election Coniguration File
+
+  # For now, this is how election events and their individual votes get defined
+  # Maybe later, this can be hooked up to a DB or something, with an interface
+  # for creating votes.
+
+  # This file should be renamed elections.yaml to be used
+
+
+- electionSetName: "Event Name 1"
+  controlPass: "123abc"
+  voterPass: "abc123"
+  votes:
+    - position: "Some Position People are Running For"
+      numPositions: 2
+      candidates:
+        - "Name 1"
+        - "Name 2"
+    - position: "Another Position"
+      numPositions: 1
+      candidates:
+        - "Name 1"
+        - "Name 2"
+        - "Name 3"
+        - "Name 4"
+
+- electionSetName: "Not the same event :)"
+  controlPass: "123abc"
+  voterPass: "abc123"
+  votes:
+    - position: "Some other position"
+      numPositions: 1
+      candidates:
+        - "Name 1"
+        - "Name 2"
+        - "Name 3"
+...
