@@ -1,9 +1,11 @@
 {{define "content"}}
-    <div class="container">
+    <div class="container pt-3">
         <h2>{{.ElectionSetName}}</h2>
         <h4>/voter/{{.ID}}</h4>
         <h4>Passcode: <code>{{.VoterPass}}</code></h4>
     </div>
+
+    {{ $controllerID := .ID }}
 
     <div class="container">
         {{range .Votes}}
@@ -21,9 +23,9 @@
                         <h2>Winners: {{.Winners}}
                     {{else}}
                         {{ if .Open }}
-                            <button class="btn btn-danger">Close Voting</button>
+                            <a href="/controller/{{$controllerID}}/{{.ID}}/close" class="btn btn-danger" >Close Voting</a>
                         {{ else }}
-                            <button class="btn btn-success">Open Voting</button>
+                            <a href="/controller/{{$controllerID}}/{{.ID}}/open" class="btn btn-success">Open Voting</a>
                         {{end}}
                     {{end}}
                 </div>
