@@ -1,0 +1,28 @@
+{{define "content"}}
+    <div class="container pt-3">
+        <h2>{{.ElectionSetName}}</h2>
+        <a href="/voter/{{.ID}}" class="btn btn-primary">Refresh</a>
+    </div>
+
+    {{ $controllerID := .ID }}
+    {{ $openVotes := false }}
+
+    <div class="container pt-3">
+        
+            {{range .Votes}}
+                {{if .Open}}
+                    {{ $openVotes = true }}
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 class="card-title">{{.Position}}</h3>
+                            <a href="/voter/{{$controllerID}}/{{.ID}}" class="btn btn-success">Vote Now</a>
+                        </div>
+                    </div>
+                {{end}}
+            {{end}}
+        
+        {{if not $openVotes}}
+            <h3>No Votes Open</h3>
+        {{end}}
+    </div>
+{{end}}
