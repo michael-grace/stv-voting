@@ -11,7 +11,6 @@ func ControllerElectionList(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
 		serve400(w)
 		return
 	}
@@ -26,11 +25,12 @@ func ControllerElectionList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentElection == nil {
-		w.WriteHeader(http.StatusNotFound)
-		serve404(w)
+		Serve404(w)
 		return
 	}
 
-	fmt.Fprintf(w, "%v", currentElection)
+	if err := serveTemplate(w, "test.html", nil, 200); err != nil {
+		fmt.Println(err)
+	}
 
 }
