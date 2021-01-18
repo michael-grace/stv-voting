@@ -6,6 +6,13 @@ import (
 	"net/http"
 )
 
+func generateVoteList(n int) (toRtn []string) {
+	for i := 0; i < n; i++ {
+		toRtn = append(toRtn, fmt.Sprintf("%v", i+1))
+	}
+	return
+}
+
 func serveTemplate(w http.ResponseWriter, path string, data interface{}, code int) error {
 	w.WriteHeader(code)
 
@@ -43,6 +50,19 @@ func Serve404(w http.ResponseWriter) {
 			Code: 404,
 			Text: "Not Found",
 		}, 404); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func serve403(w http.ResponseWriter) {
+	if err := serveTemplate(w, "error.html",
+		struct {
+			Code int
+			Text string
+		}{
+			Code: 403,
+			Text: "Forbidden",
+		}, 403); err != nil {
 		fmt.Println(err)
 	}
 }
