@@ -156,12 +156,88 @@ func voteRedistribution(firstLevel bool) (winners int) {
 	return
 }
 
+func redistributeVotes(from *candidate, elimination bool) {
+	var voteCount int = 0
+	for _, ballot := range ballots {
+		lastVote := ballot.lastVote()
+		if lastVote != nil && lastVote.candidate == from.name {
+			voteCount++
+		}
+	}
+
+	var percentPerVote float32
+	if elimination {
+		percentPerVote = float32(from.gainedPercent / float32(voteCount))
+	} else {
+		percentPerVote = float32((from.gainedPercent - requiredPercentage) / float32(voteCount))
+	}
+
+	for _, ballot := range ballots {
+		lastVote := ballot.lastVote()
+		if lastVote != nil && lastVote.candidate == from.name {
+			b := ballot.nextVote()
+			if b != nil {
+				if !candidateDetails[b.candidate].won {
+					candidateDetails[b.candidate].gainedPercent += percentPerVote
+				}
+				b.counted = true
+			}
+		}
+	}
+}
+
 func runElection(numSeats int) (results []string) {
 
 	// Count Winners
 	var winners int = 0
 
+	// for winners < numSeats {
+
+	// 	if len(candidateDetails) == numSeats {
+	// 		for _, nowWinner := range candidateDetails {
+	// 			nowWinner.won = true
+	// 		}
+	// 		break
+	// 	}
+
+	// 	fmt.Println("New Round")
+	// 	fmt.Printf("In ths Round: %v\n", candidateDetails)
+
+	// 	// Calculate Percentage Per Vote
+	// 	var voteCount int
+	// 	for _, val := range ballots {
+	// 		if val.stillIn() {
+	// 			voteCount++
+	// 		}
+	// 	}
+
+	// 	fmt.Printf("Votes In: %v\n", voteCount)
+
+	// 	if voteCount == 0 {
+	// 		// End of Election
+	// 		// fmt.Println("Ending the Election")
+	// 		// for _, nowWinner := range candidateDetails {
+	// 		// 	nowWinner.won = true
+	// 		// }
+	// 		// break
+	// 		voteCount = 100
+	// 	}
+
+	var percentPerVote float32 = float32(100 / len(ballots))
+
+	// First Votes
+	for _, ballot := range ballots {
+		b := ballot.nextVote()
+		if b != nil {
+			candidateDetails[b.candidate].gainedPercent += percentPerVote
+			b.counted = true
+		}
+	}
+
+	// Continuing Rounds
 	for winners < numSeats {
+
+		fmt.Printf("New Loop: In Race: %v\n", candidateDetails)
 
 		if len(candidateDetails) == numSeats {
 			for _, nowWinner := range candidateDetails {
@@ -170,43 +246,43 @@ func runElection(numSeats int) (results []string) {
 			break
 		}
 
-		fmt.Println("New Round")
-		fmt.Printf("In ths Round: %v\n", candidateDetails)
-
-		// Calculate Percentage Per Vote
-		var voteCount int
-		for _, val := range ballots {
-			if val.stillIn() {
-				voteCount++
+		var overThreshold []*candidate
+		for _, candidate := range candidateDetails {
+			if !candidate.won && candidate.gainedPercent >= requiredPercentage {
+				candidate.won = true
+				winners++
+				overThreshold = append(overThreshold, candidate)
 			}
 		}
 
-		fmt.Printf("Votes In: %v\n", voteCount)
-
-		if voteCount == 0 {
-			// End of Election
-			// fmt.Println("Ending the Election")
-			// for _, nowWinner := range candidateDetails {
-			// 	nowWinner.won = true
-			// }
-			// break
-			voteCount = 100
-		}
-
-		var percentPerVote float32 = float32(100 / voteCount)
-
-		// First Votes
-		for _, ballot := range ballots {
-			b := ballot.nextVote()
-			if b != nil {
-				candidateDetails[b.candidate].gainedPercent += percentPerVote
-				b.counted = true
+		if len(overThreshold) != 0 {
+			// Votes over winning threshold
+			for _, candidate := range overThreshold {
+				redistributeVotes(candidate, false)
 			}
+		} else {
+			// Eliminating Worst Candidate
+			var worstCandidate *candidate = &candidate{gainedPercent: 101}
+			for _, candidate := range candidateDetails {
+				if candidate.gainedPercent < worstCandidate.gainedPercent {
+					worstCandidate = candidate
+				}
+			}
+
+			redistributeVotes(worstCandidate, true)
+
+			delete(candidateDetails, worstCandidate.name)
+
+			for _, b := range ballots {
+				b.cleanse()
+			}
+
 		}
-
-		winners += voteRedistribution(true)
-
 	}
+
+	// winners += voteRedistribution(true)
+
+	// }
 
 	for name, candidate := range candidateDetails {
 		if candidate.won {
