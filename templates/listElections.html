@@ -20,7 +20,12 @@
                     </ul>
 
                     {{if .Complete}}
-                        <h2>Winners: {{.Winners}}
+                        <h4>Winners:</h4>
+                            <ul>
+                                {{range .Winners}}
+                                    <li>{{.}}</li>
+                                {{end}}
+                            </ul>
                     {{else}}
                         {{ if .Open }}
                             <a href="/controller/{{$controllerID}}/{{.ID}}/close" class="btn btn-danger" >Close Voting</a>

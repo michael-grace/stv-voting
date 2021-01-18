@@ -106,6 +106,10 @@ func runElection(numSeats int) (results []string) {
 // STVElection runs the complexity of the STV election
 func STVElection(numSeats int, candidates []string, pollCards [][]string) []string {
 
+	if len(pollCards) == 0 {
+		return []string{"Not Enough Voters to Decide"}
+	}
+
 	// Required Percentage to Win
 	requiredPercentage = float32(100 / numSeats)
 

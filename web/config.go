@@ -16,7 +16,7 @@ type Vote struct {
 	Candidates   []string `yaml:"candidates"`
 	Open         bool
 	Complete     bool
-	Winner       []string
+	Winners      []string
 	ballots      [][]string
 }
 
