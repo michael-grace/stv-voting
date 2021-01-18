@@ -18,7 +18,7 @@ func ControllerElectionList(w http.ResponseWriter, r *http.Request) {
 	var currentElection *ElectionSet
 
 	for _, election := range ElectionConfig {
-		if election.id == id {
+		if election.ID == id {
 			currentElection = election
 			break
 		}
@@ -29,7 +29,7 @@ func ControllerElectionList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := serveTemplate(w, "test.html", nil, 200); err != nil {
+	if err := serveTemplate(w, "listElections.html", currentElection, 200); err != nil {
 		fmt.Println(err)
 	}
 

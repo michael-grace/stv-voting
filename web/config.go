@@ -10,17 +10,19 @@ import (
 // Vote symbolises an individual vote for a position with some number of places, and some candidates
 // For URY elections, this won't automatically include RON (re-open nominations)
 type Vote struct {
-	id           string
+	ID           string
 	Position     string   `yaml:"position"`
 	NumPositions int      `yaml:"numPositions"`
 	Candidates   []string `yaml:"candidates"`
-	open         bool
+	Open         bool
+	Complete     bool
+	Winner       []string
 	ballots      [][]string
 }
 
 // ElectionSet holds the data about an election set from the YAML file
 type ElectionSet struct {
-	id              string
+	ID              string
 	ElectionSetName string  `yaml:"electionSetName"`
 	ControlPass     string  `yaml:"controlPass"`
 	VoterPass       string  `yaml:"voterPass"`
@@ -45,13 +47,15 @@ func PopulateElections() {
 
 	// This is bad
 	for _, election := range ElectionConfig {
-		election.id = fmt.Sprintf("%x", rand.Intn(16777216))
+		election.ID = fmt.Sprintf("%x", rand.Intn(16777216))
 		for _, vote := range election.Votes {
-			vote.id = fmt.Sprintf("%x", rand.Intn(16777216))
+			vote.ID = fmt.Sprintf("%x", rand.Intn(16777216))
+			vote.Open = false
+			vote.Complete = false
 		}
 	}
 
 	// Remove this later on
-	fmt.Println(ElectionConfig[0].id)
+	fmt.Println(ElectionConfig[0].ID)
 
 }

@@ -1,0 +1,33 @@
+{{define "content"}}
+    <div class="container">
+        <h2>{{.ElectionSetName}}</h2>
+        <h4>/voter/{{.ID}}</h4>
+        <h4>Passcode: <code>{{.VoterPass}}</code></h4>
+    </div>
+
+    <div class="container">
+        {{range .Votes}}
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">{{.Position}} <span class="badge badge-secondary">{{.NumPositions}}</span></h3>
+
+                    <ul class="card-text">
+                        {{range .Candidates}}
+                            <li>{{.}}</li>
+                        {{end}}
+                    </ul>
+
+                    {{if .Complete}}
+                        <h2>Winners: {{.Winners}}
+                    {{else}}
+                        {{ if .Open }}
+                            <button class="btn btn-danger">Close Voting</button>
+                        {{ else }}
+                            <button class="btn btn-success">Open Voting</button>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
+        {{end}}
+    </div>
+{{end}}
